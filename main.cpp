@@ -57,6 +57,17 @@ void normalize(Point3* point) {
   else
     point->z = 0;
 }
+Point3 normalizedCrossProduct(Point3* a, Point3* b) {
+  Point3 c = Point3();
+  c.x = a->y * b->z - a->z * b->y;
+  c.y = a->z * b->x - a->x * b->z;
+  c.z = a->x * b->y - a->y * b->x;
+  GLfloat magnitude = sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+  c.x = c.x/magnitude;
+  c.y = c.y/magnitude;
+  c.z = c.z/magnitude;
+  return c;
+}
 
 void Display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
