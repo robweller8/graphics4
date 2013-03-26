@@ -53,7 +53,7 @@ void normalize(Point3* point) {
   point->y = ynormal;
   GLfloat ztemp = sqrt(xnormal * xnormal + ynormal * ynormal);
   if (ztemp < window_height/2)
-    point->z = sqrt(ztemp);
+    point->z = (window_height/2) - sqrt(ztemp);
   else
     point->z = 0;
 }
