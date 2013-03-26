@@ -16,6 +16,29 @@ Mesh mesh;
 
 GLuint* texture_ids;
 
+class Point2 {
+  public:
+    GLfloat x, y;
+    Point2();  // default constructor
+    Point2(GLfloat _x, GLfloat _y);  // constructor
+};
+
+Point2::Point2() {  // default constructor
+  x = 0;
+  y = 0;
+}
+
+Point2::Point2(GLfloat _x, GLfloat _y) {  // constructor
+  x = _x;
+  y = _y;
+}
+
+Point2 mouse_current = Point2(0, 0);
+Point2 mouse_last = Point2(0, 0);
+Point2 mouse_last_normalized = Point2(0, 0);
+bool mouse_motion = false;
+GLfloat xnormal, ynormal;
+
 // window parameters
 int window_width = 800, window_height = 600;
 float window_aspect = window_width / static_cast<float>(window_height);
@@ -131,12 +154,22 @@ void DrawAxis() {
 }
 
 void MouseButton(int button, int state, int x, int y) {
-  // TODO implement arc ball and zoom
-  glutPostRedisplay();
+  if (button == GLUT_LEFT_BUTTON) {
+    if (state == GLUT_DOWN) {
+      mouse_motion = true;
+      int ypos = window_height - y;
+      mouse_last = mouse_current;
+      xnormal = 2 * x / window_width -1;
+      ynormal = -1 * (2 * x / window_height -1);
+    } else {
+      mouse_motion = false;
+    }
+  }
 }
-
 void MouseMotion(int x, int y) {
-  // TODO implement arc ball and zoom
+  if (mouse_motion) {
+    mouse_current = Point2(x, y);
+  }
   glutPostRedisplay();
 }
 
