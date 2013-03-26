@@ -16,34 +16,47 @@ Mesh mesh;
 
 GLuint* texture_ids;
 
-class Point2 {
+class Point3 {
   public:
-    GLfloat x, y;
-    Point2();  // default constructor
-    Point2(GLfloat _x, GLfloat _y);  // constructor
+    GLfloat x, y, z;
+    Point3();  // default constructor
+    Point3(GLfloat _x, GLfloat _y, GLfloat _z);  // constructor
 };
 
-Point2::Point2() {  // default constructor
+Point3::Point3() {  // default constructor
   x = 0;
   y = 0;
+  z = 0;
 }
 
-Point2::Point2(GLfloat _x, GLfloat _y) {  // constructor
+Point3::Point3(GLfloat _x, GLfloat _y, GLfloat _z) {  // constructor
   x = _x;
   y = _y;
+  z = _z;
 }
 
-Point2 mouse_current = Point2(0, 0);
-Point2 mouse_last = Point2(0, 0);
-Point2 mouse_last_normalized = Point2(0, 0);
+Point3 mouse_current = Point3(0, 0, 0);
+Point3 mouse_last = Point3(0, 0, 0);
 bool mouse_motion = false;
-GLfloat xnormal, ynormal;
+GLfloat xnormal, ynormal, znormal;
 
 // window parameters
 int window_width = 800, window_height = 600;
 float window_aspect = window_width / static_cast<float>(window_height);
 
 bool scene_lighting;
+
+void normalize(Point3* point) {
+  xnormal = 2 * point->x / window_width;
+  ynormal = -1 * (2 * point->y / window_height);
+  point->x = xnormal;
+  point->y = ynormal;
+  GLfloat ztemp = sqrt(xnormal * xnormal + ynormal * ynormal);
+  if (ztemp < window_height/2)
+    point->z = sqrt(ztemp);
+  else
+    point->z = 0;
+}
 
 void Display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -158,9 +171,8 @@ void MouseButton(int button, int state, int x, int y) {
     if (state == GLUT_DOWN) {
       mouse_motion = true;
       int ypos = window_height - y;
-      mouse_last = mouse_current;
-      xnormal = 2 * x / window_width -1;
-      ynormal = -1 * (2 * x / window_height -1);
+      mouse_last = Point3(x, y, 0);
+      normalize(&mouse_last);
     } else {
       mouse_motion = false;
     }
@@ -168,7 +180,8 @@ void MouseButton(int button, int state, int x, int y) {
 }
 void MouseMotion(int x, int y) {
   if (mouse_motion) {
-    mouse_current = Point2(x,y);
+    mouse_current = Point3(x, y, 0);
+    normalize(&mouse_current);
   }
   glutPostRedisplay();
 }
