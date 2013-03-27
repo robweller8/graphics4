@@ -11,6 +11,7 @@
 #include "./texture.h"
 
 using namespace std;
+#define PI 3.14159265
 
 Mesh mesh;
 
@@ -35,9 +36,15 @@ Point3::Point3(GLfloat _x, GLfloat _y, GLfloat _z) {  // constructor
   z = _z;
 }
 
+Vec3f eye = Vec3f::makeVec(2, 2, 5);
+Vec3f center = Vec3f::makeVec(0, 0, 0);
+Vec3f up = Vec3f::makeVec(0, 1, 0);
+
 Point3 mouse_current = Point3(0, 0, 0);
 Point3 mouse_last = Point3(0, 0, 0);
 bool mouse_motion = false;
+bool zoom = false;
+GLfloat yzoom = 0;
 GLfloat xnormal, ynormal, znormal;
 
 // window parameters
@@ -46,18 +53,23 @@ float window_aspect = window_width / static_cast<float>(window_height);
 
 bool scene_lighting;
 
+void SetCamera() {
+  gluLookAt(eye[0], eye[1], eye[2],
+            center[0], center[1], center[2],
+            up[0], up[1], up[2]);
+}
+
 void normalize(Point3* point) {
-  xnormal = 2 * point->x / window_width;
-  ynormal = -1 * (2 * point->y / window_height);
-  point->x = xnormal;
-  point->y = ynormal;
-  GLfloat ztemp = sqrt(xnormal * xnormal + ynormal * ynormal);
-  if (ztemp < window_height/2)
-    point->z = (window_height/2) - sqrt(ztemp);
+  point->x = 2 * point->x / window_width - 1;
+  point->y = -1 * (2 * point->y / window_height - 1);
+  GLfloat ztemp = point->x * point->x + point->y * point->y;
+  if (ztemp < 2)
+    point->z = sqrt(1 - ztemp);
   else
     point->z = 0;
 }
-Point3 normalizedCrossProduct(Point3* a, Point3* b) {
+
+Point3 nCross(Point3* a, Point3* b) {
   Point3 c = Point3();
   c.x = a->y * b->z - a->z * b->y;
   c.y = a->z * b->x - a->x * b->z;
@@ -67,6 +79,48 @@ Point3 normalizedCrossProduct(Point3* a, Point3* b) {
   c.y = c.y/magnitude;
   c.z = c.z/magnitude;
   return c;
+}
+
+GLfloat nDot(Point3* a, Point3* b) {
+  GLfloat result = a->x * b->x + a->y * b->y + a->z * b->z;
+  GLfloat amag = sqrt(a->x * a->x + a->y * a->y + a->z * a->z);
+  GLfloat bmag = sqrt(b->x * b->x + b->y * b->y + b->z * b->z);
+  result = result / (amag * bmag);
+  return result;
+}
+
+void ZoomIn() {
+  cout << "&&&&&&zoomin!!!" << endl;
+  eye[0] = eye[0]*0.99;
+  eye[1] = eye[1]*0.99;
+  eye[2] = eye[2]*0.99;
+}
+
+void ZoomOut() {
+  cout << "zoomout!!!" << endl;
+  eye[0] = eye[0]*1.01;
+  eye[1] = eye[1]*1.01;
+  eye[2] = eye[2]*1.01;
+}
+
+void Rotate(Point3* a, Point3* b) {
+  if (a->x != b->x || a->y != b->y || a->z != b->z) {
+    Point3 c = nCross(a, b);
+    GLfloat sint = sin(acos(nDot(a, b)));
+    GLfloat cost = nDot(a, b);
+    GLfloat pcos = 1 - cost;
+    eye[0]= eye[0]*pcos*c.x*c.x+cost +
+              eye[1]*pcos*c.x*c.y+sint*c.z +
+                eye[2]*pcos*c.x*c.z-sint*c.y;
+
+    eye[1]= eye[0]*pcos*c.x*c.y-sint*c.z +
+              eye[1]*pcos*c.y*c.y+cost +
+                eye[2]*pcos*c.y*c.z+sint*c.x;
+
+    eye[2]= eye[0]*pcos*c.z*c.x+sint*c.y +
+              eye[1]*pcos*c.z*c.y-sint*c.x +
+                eye[2]*pcos*c.z*c.z+cost;
+  }
 }
 
 void Display() {
@@ -80,9 +134,7 @@ void Display() {
   // mesh.bb() may be useful.
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(2, 2, 5,
-            0, 0, 0,
-            0, 1, 0);
+  SetCamera();
 
   // TODO set up lighting, material properties and render mesh.
   // Be sure to call glEnable(GL_RESCALE_NORMAL) so your normals
@@ -184,15 +236,34 @@ void MouseButton(int button, int state, int x, int y) {
       int ypos = window_height - y;
       mouse_last = Point3(x, y, 0);
       normalize(&mouse_last);
+      cout << "eye: " << eye[0] << " " << eye[1] << " " << eye[2] << endl;
     } else {
       mouse_motion = false;
+      mouse_last = mouse_current;
     }
+    } else {
+        if (state == GLUT_DOWN) {
+          zoom = true;
+          yzoom = y;
+        } else {
+          zoom = false;
+        }
   }
 }
 void MouseMotion(int x, int y) {
   if (mouse_motion) {
     mouse_current = Point3(x, y, 0);
     normalize(&mouse_current);
+    Rotate(&mouse_last, &mouse_current);
+    // mouse_last = mouse_current;
+  } else if (zoom) {
+    if (y - yzoom > 0) {
+      ZoomIn();
+      yzoom = y;
+    } else {
+      ZoomOut();
+      yzoom = y;
+    }
   }
   glutPostRedisplay();
 }
