@@ -36,7 +36,7 @@ Point3::Point3(GLfloat _x, GLfloat _y, GLfloat _z) {  // constructor
   z = _z;
 }
 
-Point3 eye = Point3(2, 2, 5);
+Point3 eye = Point3(2, 200, 200);
 Point3 eyecopy = Point3(2, 2, 5);
 Vec3f center = Vec3f::makeVec(0, 0, 0);
 Vec3f up = Vec3f::makeVec(0, 1, 0);
@@ -132,9 +132,47 @@ void Display() {
 
   // You can leave the axis in if you like.
   glDisable(GL_LIGHTING);
+  mesh.drawVertexNormals();
   glLineWidth(4);
   DrawAxis();
   glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+
+  GLfloat l1[] = {150.0f, 150.0f, 150.0f, 1.0f};
+  GLfloat l2[] = {0.0f, 10.0f, 0.0f, 1.0f};
+  if (scene_lighting) {
+    cout << "in trueeeeee!!!!!!!!!" << endl;
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glTranslatef(l1[0], l1[1], l1[2]);
+    GLfloat poszero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glLightfv(GL_LIGHT0, GL_POSITION, poszero);
+    glTranslatef(-1*l1[0], -1*l1[1], -1*l1[2]);
+
+    // glTranslatef(l2[0], l2[0], l2[0]);
+    // GLfloat pos[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    // glLightfv(GL_LIGHT0, GL_POSITION, poszero);
+    // glTranslatef(-1*l2[0], -1*l2[1], -1*l2[2]);
+
+    glPopMatrix();
+
+  } else {
+    cout << "in trueeeeee!!!!!!!!!" << endl;
+    glLightfv(GL_LIGHT0, GL_POSITION, l1);
+    // glLightfv(GL_LIGHT0, GL_POSITION, l2);
+  }
+
+  // GLfloat lightColor0[] = {0.5f, 0.5f, 0.5f, 1.0f};
+  // GLfloat lightPos0[] = {-300.0f, 300.0f, 300.0f, 1.0f};
+  // glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
+  // glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+
+  glEnable(GL_TEXTURE_2D);
+  // glBindTexture(GL_TEXTURE_2D, 0);
+
+  mesh.render();
+
   glFlush();
   glutSwapBuffers();
 }
@@ -249,10 +287,10 @@ void MouseMotion(int x, int y) {
     Rotate(&mouse_last, &mouse_current);
   } else if (zoom) {
     if (y - yzoom > 0) {
-      ZoomIn();
+      ZoomOut();
       yzoom = y;
     } else {
-      ZoomOut();
+      ZoomIn();
       yzoom = y;
     }
   }
