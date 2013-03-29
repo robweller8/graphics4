@@ -79,15 +79,19 @@ void zcalculate(Vec3f* point) {
 }
 
 void ZoomIn() {
+  glLoadMatrixf(saved);
   eye.x = eye.x*0.99;
   eye.y = eye.y*0.99;
   eye.z = eye.z*0.99;
+  glGetFloatv(GL_MODELVIEW_MATRIX, saved);
 }
 
 void ZoomOut() {
+  glLoadMatrixf(saved);
   eye.x = eye.x*1.01;
   eye.y = eye.y*1.01;
   eye.z = eye.z*1.01;
+  glGetFloatv(GL_MODELVIEW_MATRIX, saved);
 }
 
 void Rotate(Vec3f* a, Vec3f* b) {
@@ -95,8 +99,8 @@ void Rotate(Vec3f* a, Vec3f* b) {
     (*b) = (*b).unit();
     cross = (*a)^(*b);
     theta = 180*acos(((*a)*(*b))/(((*a).norm())*((*b).norm())))/PI;
-    cross.unit();
-    axis[0] = cross[0];
+    // cross.unit();
+    /* axis[0] = cross[0];
     axis[1] = cross[1];
     axis[2] = cross[2];
     axis[0] = cross[0]*saved[0] + cross[1]*saved[1] + cross[2]*saved[2];
@@ -104,7 +108,7 @@ void Rotate(Vec3f* a, Vec3f* b) {
     axis[2] = cross[0]*saved[8] + cross[1]*saved[9] + cross[2]*saved[10];
     cross[0] = axis[0];
     cross[1] = axis[1];
-    cross[2] = axis[2];
+    cross[2] = axis[2];*/
 }
 
 void Display() {
@@ -120,11 +124,18 @@ void Display() {
   glLoadIdentity();
 
   SetCamera();
-  if (theta != 0) {
+
+  if (theta != 0)
+    glRotatef(theta, cross[0], cross[1], cross[2]);
+  glMultMatrixf(saved);
+
+
+  /*if (theta != 0) {
     glLoadMatrixf(saved);
     glRotatef(theta, cross[0], cross[1], cross[2]);
     theta = 0;
-  }
+  }*/
+
 
   // TODO set up lighting, material properties and render mesh.
   // Be sure to call glEnable(GL_RESCALE_NORMAL) so your normals
@@ -132,7 +143,7 @@ void Display() {
 
   // You can leave the axis in if you like.
   glDisable(GL_LIGHTING);
-  mesh.drawVertexNormals();
+  // mesh.drawVertexNormals();
   glLineWidth(4);
   DrawAxis();
   glEnable(GL_LIGHTING);
@@ -141,7 +152,6 @@ void Display() {
   GLfloat l1[] = {150.0f, 150.0f, 150.0f, 1.0f};
   GLfloat l2[] = {0.0f, 10.0f, 0.0f, 1.0f};
   if (scene_lighting) {
-    cout << "in trueeeeee!!!!!!!!!" << endl;
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
@@ -158,7 +168,6 @@ void Display() {
     glPopMatrix();
 
   } else {
-    cout << "in trueeeeee!!!!!!!!!" << endl;
     glLightfv(GL_LIGHT0, GL_POSITION, l1);
     // glLightfv(GL_LIGHT0, GL_POSITION, l2);
   }
@@ -259,7 +268,7 @@ void DrawAxis() {
 void MouseButton(int button, int state, int x, int y) {
   if (button == GLUT_LEFT_BUTTON) {
     if (state == GLUT_DOWN) {
-      glGetFloatv(GL_MODELVIEW_MATRIX, saved);
+      // glGetFloatv(GL_MODELVIEW_MATRIX, saved);
       mouse_motion = true;
       mouse_last[0] = x;
       mouse_last[1] = y;
@@ -268,6 +277,13 @@ void MouseButton(int button, int state, int x, int y) {
     } else {
       mouse_motion = false;
       mouse_last = mouse_current;
+      glPushMatrix();
+      glLoadIdentity();
+      glRotatef(theta, cross[0], cross[1], cross[2]);
+      glMultMatrixf(saved);
+      glGetFloatv(GL_MODELVIEW_MATRIX, saved);
+      glPopMatrix();
+      theta = 0;
     }
     } else {
         if (state == GLUT_DOWN) {
