@@ -36,16 +36,22 @@ Point3::Point3(GLfloat _x, GLfloat _y, GLfloat _z) {  // constructor
   z = _z;
 }
 
-Vec3f eye = Vec3f::makeVec(2, 2, 5);
+Point3 eye = Point3(2, 2, 5);
+Point3 eyecopy = Point3(2, 2, 5);
 Vec3f center = Vec3f::makeVec(0, 0, 0);
 Vec3f up = Vec3f::makeVec(0, 1, 0);
-
-Point3 mouse_current = Point3(0, 0, 0);
-Point3 mouse_last = Point3(0, 0, 0);
+Vec3f mouse_current = Vec3f::makeVec(0, 0, 0);
+Vec3f mouse_last = Vec3f::makeVec(0, 0, 0);
+GLfloat theta = 0;
+Vec3f cross = Vec3f::makeVec(0, 0, 0);
 bool mouse_motion = false;
 bool zoom = false;
 GLfloat yzoom = 0;
-GLfloat xnormal, ynormal, znormal;
+GLfloat saved[16]= {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+                       0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+                          0.0f, 0.0f, 1.0f};
+GLfloat axis[3];
+GLdouble x, y, z;
 
 // window parameters
 int window_width = 800, window_height = 600;
@@ -54,73 +60,51 @@ float window_aspect = window_width / static_cast<float>(window_height);
 bool scene_lighting;
 
 void SetCamera() {
-  gluLookAt(eye[0], eye[1], eye[2],
+  gluLookAt(eye.x, eye.y, eye.z,
             center[0], center[1], center[2],
             up[0], up[1], up[2]);
 }
 
-void normalize(Point3* point) {
-  point->x = 2 * point->x / window_width - 1;
-  point->y = -1 * (2 * point->y / window_height - 1);
-  GLfloat ztemp = point->x * point->x + point->y * point->y;
-  if (ztemp <= 2)
-    point->z = sqrt(1 - ztemp);
-  else
-    point->z = 0;
-}
-
-Point3 nCross(Point3* a, Point3* b) {
-  Point3 c = Point3();
-  c.x = a->y * b->z - a->z * b->y;
-  c.y = a->z * b->x - a->x * b->z;
-  c.z = a->x * b->y - a->y * b->x;
-  GLfloat magnitude = sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
-  c.x = c.x/magnitude;
-  c.y = c.y/magnitude;
-  c.z = c.z/magnitude;
-  return c;
-}
-
-GLfloat nDot(Point3* a, Point3* b) {
-  GLfloat result = a->x * b->x + a->y * b->y + a->z * b->z;
-  GLfloat amag = sqrt(a->x * a->x + a->y * a->y + a->z * a->z);
-  GLfloat bmag = sqrt(b->x * b->x + b->y * b->y + b->z * b->z);
-  result = result / (amag * bmag);
-  return result;
+void zcalculate(Vec3f* point) {
+  (*point)[0] = 2 * (*point)[0] / window_width - 1;
+  (*point)[1] = -1 * (2 * (*point)[1] / window_height -1);
+  (*point)[1] = (*point)[1]/window_aspect;
+  GLfloat ztemp = (*point)[0] * (*point)[0] + (*point)[1] * (*point)[1];
+  if (ztemp < 1) {
+    (*point)[2] = sqrt(1 - ztemp);
+  } else {
+    (*point)[2] = 0;
+  }
+  (*point).unit();
 }
 
 void ZoomIn() {
-  cout << "&&&&&&zoomin!!!" << endl;
-  eye[0] = eye[0]*0.99;
-  eye[1] = eye[1]*0.99;
-  eye[2] = eye[2]*0.99;
+  eye.x = eye.x*0.99;
+  eye.y = eye.y*0.99;
+  eye.z = eye.z*0.99;
 }
 
 void ZoomOut() {
-  cout << "zoomout!!!" << endl;
-  eye[0] = eye[0]*1.01;
-  eye[1] = eye[1]*1.01;
-  eye[2] = eye[2]*1.01;
+  eye.x = eye.x*1.01;
+  eye.y = eye.y*1.01;
+  eye.z = eye.z*1.01;
 }
 
-void Rotate(Point3* a, Point3* b) {
-  if (a->x != b->x || a->y != b->y || a->z != b->z) {
-    Point3 c = nCross(a, b);
-    GLfloat sint = sin(acos(nDot(a, b)));
-    GLfloat cost = nDot(a, b);
-    GLfloat pcos = 1 - cost;
-    eye[0]= eye[0]*pcos*c.x*c.x+cost +
-              eye[1]*pcos*c.x*c.y+sint*c.z +
-                eye[2]*pcos*c.x*c.z-sint*c.y;
-
-    eye[1]= eye[0]*pcos*c.x*c.y-sint*c.z +
-              eye[1]*pcos*c.y*c.y+cost +
-                eye[2]*pcos*c.y*c.z+sint*c.x;
-
-    eye[2]= eye[0]*pcos*c.z*c.x+sint*c.y +
-              eye[1]*pcos*c.z*c.y-sint*c.x +
-                eye[2]*pcos*c.z*c.z+cost;
-  }
+void Rotate(Vec3f* a, Vec3f* b) {
+    (*a) = (*a).unit();
+    (*b) = (*b).unit();
+    cross = (*a)^(*b);
+    theta = 180*acos(((*a)*(*b))/(((*a).norm())*((*b).norm())))/PI;
+    cross.unit();
+    axis[0] = cross[0];
+    axis[1] = cross[1];
+    axis[2] = cross[2];
+    axis[0] = cross[0]*saved[0] + cross[1]*saved[1] + cross[2]*saved[2];
+    axis[1] = cross[0]*saved[4] + cross[1]*saved[5] + cross[2]*saved[6];
+    axis[2] = cross[0]*saved[8] + cross[1]*saved[9] + cross[2]*saved[10];
+    cross[0] = axis[0];
+    cross[1] = axis[1];
+    cross[2] = axis[2];
 }
 
 void Display() {
@@ -134,7 +118,13 @@ void Display() {
   // mesh.bb() may be useful.
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+
   SetCamera();
+  if (theta != 0) {
+    glLoadMatrixf(saved);
+    glRotatef(theta, cross[0], cross[1], cross[2]);
+    theta = 0;
+  }
 
   // TODO set up lighting, material properties and render mesh.
   // Be sure to call glEnable(GL_RESCALE_NORMAL) so your normals
@@ -145,7 +135,6 @@ void Display() {
   glLineWidth(4);
   DrawAxis();
   glEnable(GL_LIGHTING);
-
   glFlush();
   glutSwapBuffers();
 }
@@ -232,11 +221,12 @@ void DrawAxis() {
 void MouseButton(int button, int state, int x, int y) {
   if (button == GLUT_LEFT_BUTTON) {
     if (state == GLUT_DOWN) {
+      glGetFloatv(GL_MODELVIEW_MATRIX, saved);
       mouse_motion = true;
-      int ypos = window_height - y;
-      mouse_last = Point3(x, y, 0);
-      normalize(&mouse_last);
-      cout << "eye: " << eye[0] << " " << eye[1] << " " << eye[2] << endl;
+      mouse_last[0] = x;
+      mouse_last[1] = y;
+      mouse_last[2] = 0;
+      zcalculate(&mouse_last);
     } else {
       mouse_motion = false;
       mouse_last = mouse_current;
@@ -251,11 +241,12 @@ void MouseButton(int button, int state, int x, int y) {
   }
 }
 void MouseMotion(int x, int y) {
+  mouse_current[0] = x;
+  mouse_current[1] = y;
+  mouse_current[2] = 0;
+  zcalculate(&mouse_current);
   if (mouse_motion) {
-    mouse_current = Point3(x, y, 0);
-    normalize(&mouse_current);
     Rotate(&mouse_last, &mouse_current);
-    // mouse_last = mouse_current;
   } else if (zoom) {
     if (y - yzoom > 0) {
       ZoomIn();
